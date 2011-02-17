@@ -1,0 +1,7 @@
+; $Id: $
+name = Webform Confirm
+description = Allows creation of a confirmation form for the webform module
+core = 6.x
+dependencies[]=webform
+package = Webform
+php = 5.0

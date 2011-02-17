@@ -1,0 +1,43 @@
+<?php
+
+function webform_confirm_form_alter(&$form, &$form_state, $form_id) {
+  $is_webform = (isset($form['#node']->type) && $form['#node']->type == 'webform');
+  if($is_webform) {
+    $form['#submit']=array_merge(array('webform_confirm_client_form_submit'), $form['#submit']);
+  }
+  if($is_webform && $_SERVER['REQUEST_METHOD']=='POST') {
+    foreach ($form['submitted'] as $key => &$item) {
+      if (isset($item['#type'])) {
+        
+        #$item['#value']=$form_state['post']['submitted'][$key];
+        #$item['#prefix']='<div class="kakunin">'.
+        #  '<input type="hidden" name="submitted['.$key.']" value="'.$item['#value'].'" />';
+        $item['#type']='hidden';
+        #$item['#suffix']='</div>';
+      }
+    }
+    if (!isset($_POST['submitted']['confirmation_done'])) {
+      $form['submitted']['confirmation_done'] = array('#type' => 'hidden', '#value' => 1);
+    }
+    else {
+      global $confirmed;
+      $confirmed = true;
+    }
+    
+    $form['actions']['back'] = array(
+      '#type'=>'button', '#button_type' => 'button', '#value' => t('Return'), '#weight' => 1000, 
+      '#attributes' => array('onclick' => 'window.location=\'history.back()\'; return false;')
+      );
+  }
+  if($is_webform && $_SERVER['REQUEST_METHOD']!='POST'){
+    $form['actions']['submit']['#value'] = t('To confirmation page');
+  }
+}
+
+function webform_confirm_client_form_submit($form, &$form_state) {
+  global $confirmed;
+  if (!(isset($confirmed) && $confirmed == true)) {
+    form_set_error('', t('Please check the below form'));
+    return;
+  }
+}
