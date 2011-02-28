@@ -59,7 +59,7 @@ function webform_confirm_preprocess_node(&$vars) {
  *   the stripped down key value pair of attributes
  */
 function _webform_confirm_remove_unwanted_attributes($attributes) {
-  $keep = array('hidden', 'name', 'value');
+  $keep = array('type', 'name', 'value');
   foreach ($attributes as $key => $attribute) {
     if (!in_array($key, $keep)) {
       unset($attributes[$key]);
