@@ -18,8 +18,12 @@ function webform_confirm_preprocess_node(&$vars) {
     xml_parse_into_struct($p, $vars['content'], $vals, $index);
     xml_parser_free($p);
     $output = array();
+    $vals = _webform_confirm_remove_unchecked_radios($vals);
+    var_dump($vals);
+    exit;
     foreach ($vals as $val) {
       if ($val['tag'] == 'form' && $val['type'] == 'close') {
+        
         // add my own hidden tag for confirmation
         $output[]= array(
             'tag' => 'input',
@@ -31,6 +35,13 @@ function webform_confirm_preprocess_node(&$vars) {
               'value' => '1',
             ),
         );
+      }
+      if (
+        $val['tag'] == 'input' && 
+        ($val['attributes']['type'] == 'radio' || $val['attributes']['type'] == 'checkbox')
+      ) {
+        $val['attributes']['type'] = 'hidden';
+        $val['attributes'] = _webform_confirm_remove_unwanted_attributes($val['attributes']);
       }
       if ($val['tag'] == 'input' && $val['attributes']['type'] == 'text') {
         $val['attributes']['type'] = 'hidden';
@@ -44,10 +55,97 @@ function webform_confirm_preprocess_node(&$vars) {
         $val['attributes'] = _webform_confirm_remove_unwanted_attributes($val['attributes']);
         $output[] = _webform_confirm_get_span($val);
       }
-      $output[]= $val;
+      $output[] = $val;
     }
     $vars['content'] = _webform_confirm_create_xml($output);
   }
+}
+
+/*
+ * Processes select tags and multiple select tags, replacing them with the correct
+ * span and hidden tags for preview.
+ * 
+ * @param $vals 
+ *   the whole set of tags from xml_parse_into_struct()
+ * @return 
+ *   the corrected xml_parse_into_struct compatible array
+ */
+function _webform_confirm_process_selected($vals) {
+  $options = false;
+  foreach ($vals as $key => $tag) {
+    if ($tag['tag'] == 'select' && $type == 'open') {
+      if (isset($tag['attributes']['multiple'])) {
+        $options = 'multiple';
+      }
+      else{
+        $options = 'single';
+      }
+      $keys = array();
+      $values = array();
+      $tag_key = $tag['attributes']['name'];
+    }
+    if ($options) {
+      $keys[] = $tag['attributes']['value'];
+      $values[] = $tag['value'];
+      unset($vals[$key]);
+    }
+    if ($tag['tag'] == 'select' && $type == 'close') {
+      $options = false;
+      if ($options == 'multiple') {
+        $vals[$key] = _webform_confirm_get_span(array(
+          'level' => $tag['level'], 
+          'value' => implode(', ', $values),
+        ));
+        foreach($keys as $key) {
+          $vals[] = _webform_confirm_get_hidden_tag($tag_key.'[]', $key);
+        }
+      }
+      else {
+        $vals[$key] = _webform_confirm_get_span(array('level' => $tag['level'], 'value' => $values[0]));
+        $vals[] = _webform_confirm_get_hidden_tag($tag_key, $keys[0]);
+      }
+    }
+  }
+  return $vals;
+}
+
+/*
+ * Removes un-needed tags which occur from unchecked radio boxes
+ * 
+ * @param $vals 
+ *   the whole set of tags from xml_parse_into_struct()
+ * @return 
+ *   the stripped down xml_parse_into_struct compatible array
+ */
+function _webform_confirm_remove_unchecked_radios($vals) {
+  $unselected_ids = array();
+  // find the unchecked radio button
+  foreach ($vals as $key => $tag){
+    if ($tag['attributes']['type'] == 'radio' || $tag['attributes']['type'] == 'checkbox') {
+      if (!isset($tag['attributes']['checked'])) {
+        $unselected_ids[] = $tag['attributes']['id'];
+      }
+    }
+  }
+  // now remove the tags we don't want
+  if (count($unselected_ids)) {
+    $remove = false;
+    foreach ($vals as $key => $tag) {
+      foreach ($unselected_ids as $id){
+        if (!$remove && $tag['attributes']['id'] == $id . '-wrapper') {
+          $remove = true;
+        }
+        if ($remove) {
+          unset($vals[$key]);
+          // reset the remove flag when we have closed the tag which instantiated it
+          if ($tag['tag'] == 'div' && $tag['type'] == 'close') {
+            $remove = false;
+          }
+        }
+      }
+    }
+  }  
+  return $vals;
 }
 
 /*
@@ -91,9 +189,10 @@ function _webform_confirm_create_xml($vals) {
               $output .= _webform_confirm_get_tag_attributes($tag['attributes']);
           } 
           if($tag['type'] != 'cdata'){ 
-              $output .= ($tag['type']=='complete')? '/>' . "\n" : '>' . "\n"; 
+              $output .= ($tag['type']=='complete' && !isset($tag['value']))? '/>' . "\n" : '>' . "\n"; 
           }
           $output .= (isset($tag['value']))? $tag['value'] : ''; 
+          $output .= ($tag['type']=='complete' && isset($tag['value']))? '</'.$tag['tag'].'>' : '';
       }
       else {
         $output .= '</'.$tag['tag'].'>'; 
@@ -123,10 +222,10 @@ function _webform_confirm_get_tag_attributes($attributes = null){
 /*
  * Adds a span tag
  * 
- * @param $attributes 
- *   an array of key value pairs to be written in to the tag
+ * @param $val 
+ *   the individual tag array of which to create the span tag array
  * @return 
- *   the string created to be placed between the tag
+ *   a span tag array
  */
 function _webform_confirm_get_span($val) {
   return array(
@@ -135,6 +234,25 @@ function _webform_confirm_get_span($val) {
     'level' => $val['level'],
     'attributes' => array('class' => 'confirm-text'), 
     'value' => isset($val['value'])? nl2br($val['value']) : nl2br($val['attributes']['value']),
+  );
+}
+
+/*
+ * Adds a hidden tag
+ * 
+ * @param $key 
+ *   the tag name attribute
+ * @param $value 
+  *   the tag value attribute
+ * @return 
+ *   the tag array of which to create a hidden tag on write
+ */
+function _webform_confirm_get_hidden_tag($key, $value) {
+  return array(
+    'tag' => 'input',
+    'type' => 'complete',
+    'level' => 1,
+    'attributes' => array('value' => $value, 'name' => $key), 
   );
 }
 
@@ -163,7 +281,7 @@ function webform_confirm_form_alter(&$form, &$form_state, $form_id) {
 }
 
 /*
- * An implementation of hook_orm_validate, raises a confirm global flag
+ * An implementation of hook_form_validate, raises a confirm global flag
  * and sets form error message for confirmation page.
  * 
  * @param $form 
@@ -175,7 +293,7 @@ function webform_confirm_form_alter(&$form, &$form_state, $form_id) {
  */
 function webform_confirm_form_validate(&$form, &$form_state) {
   global $confirm;
-  if (!is_form_errors() && !isset($_POST['confirm']) && arg(2) != 'webform') {
+  if (!is_form_errors() && !isset($_POST['confirm']) && arg(2) != 'webform'  && arg(2) != 'submission') {
     form_set_error('', t('Please check the below form'));
     $confirm = true;
   }

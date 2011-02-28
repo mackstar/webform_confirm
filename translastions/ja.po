@@ -1,0 +1,41 @@
+# $Id$
+#
+# LANGUAGE translation of Drupal (general)
+# Copyright 2011 Richard McIntyre <richard.mackstar@gmail.com>>
+# Generated from files:
+#  webform_confirm.module: n/a
+#  webform_confirm.info: n/a
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2011-02-28 17:14+0900\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Last-Translator: Richard McIntyre<richard.mackstar@gmail.com>\n"
+"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: webform_confirm.module:227
+msgid "To confirmation page"
+msgstr "確認画面へ"
+
+#: webform_confirm.module:245
+msgid "Please check the below form"
+msgstr "入力されたデータを確認してください"
+
+#: webform_confirm.info:0
+msgid "Webform Confirm"
+msgstr "ウェブフォーム確認画面"
+
+#: webform_confirm.info:0
+msgid "Allows creation of a confirmation form for the webform module"
+msgstr "ウェブフォームモジュールの為に確認画面を有効する"
+
+#: webform_confirm.info:0
+msgid "Webform"
+msgstr "ウェブフォーム"
+
