@@ -1,43 +1,182 @@
 <?php
+/*
+ * An implementation of preprocess_node to rewite the web form
+ * in order to have a confirmation page. This is done by using 
+ * php's xml_parser functions
+ * 
+ * @param $vars 
+ *   the node variables
+ * @return 
+ *   void
+ */
+function webform_confirm_preprocess_node(&$vars) {
+  global $confirm;
+  if($_SERVER['REQUEST_METHOD'] == 'POST' &&  $confirm) {
+    $p = xml_parser_create($p);
+    xml_parser_set_option($p, XML_OPTION_CASE_FOLDING, 0);    
+    xml_parser_set_option($p, XML_OPTION_SKIP_WHITE, 1);
+    xml_parse_into_struct($p, $vars['content'], $vals, $index);
+    xml_parser_free($p);
+    $output = array();
+    foreach ($vals as $val) {
+      if ($val['tag'] == 'form' && $val['type'] == 'close') {
+        // add my own hidden tag for confirmation
+        $output[]= array(
+            'tag' => 'input',
+            'type' => 'complete',
+            'level' => 1,
+            'attributes' => array(
+              'type' => 'hidden',
+              'name' => 'confirm',
+              'value' => '1',
+            ),
+        );
+      }
+      if ($val['tag'] == 'input' && $val['attributes']['type'] == 'text') {
+        $val['attributes']['type'] = 'hidden';
+        $val['attributes'] = _webform_confirm_remove_unwanted_attributes($val['attributes']);
+        $output[] = _webform_confirm_get_span($val);
+      }
+      if($val['tag'] == 'textarea') {
+        $val['tag'] = 'input';
+        $val['attributes']['type'] = 'hidden';
+        $val['attributes']['value'] = $val['value'];
+        $val['attributes'] = _webform_confirm_remove_unwanted_attributes($val['attributes']);
+        $output[] = _webform_confirm_get_span($val);
+      }
+      $output[]= $val;
+    }
+    $vars['content'] = _webform_confirm_create_xml($output);
+  }
+}
 
+/*
+ * Removes un-needed attributes from the hidden tag
+ * 
+ * @param $attributes 
+ *   a key value paired array containing tag attributes
+ * @return 
+ *   the stripped down key value pair of attributes
+ */
+function _webform_confirm_remove_unwanted_attributes($attributes) {
+  $keep = array('hidden', 'name', 'value');
+  foreach ($attributes as $key => $attribute) {
+    if (!in_array($key, $keep)) {
+      unset($attributes[$key]);
+    }
+  }
+  return $attributes;
+}
+
+/*
+ * Creates xml from an array struct created by xml_parse_into_struct
+ * function
+ * 
+ * @param $vals 
+ *   an array that is an implentation of xml_parse_into_struct()
+ * @return 
+ *   the fully fledged xml string
+ */
+function _webform_confirm_create_xml($vals) {
+  $output=''; 
+  foreach( $vals as $tag ){ 
+      for ($i=1; $i < $tag['level'];$i++) {
+          $output.="\t"; 
+      }    
+      if ($tag['type'] != 'close') { 
+          if ($tag['type'] != 'cdata') {
+              $output .= '<'.$tag['tag'];
+          }
+          if (isset($tag['attributes'])) {
+              $output .= _webform_confirm_get_tag_attributes($tag['attributes']);
+          } 
+          if($tag['type'] != 'cdata'){ 
+              $output .= ($tag['type']=='complete')? '/>' . "\n" : '>' . "\n"; 
+          }
+          $output .= (isset($tag['value']))? $tag['value'] : ''; 
+      }
+      else {
+        $output .= '</'.$tag['tag'].'>'; 
+      }                
+  }
+  return $output;
+}
+
+/*
+ * A helper function to get the string of attributes for a tag
+ * 
+ * @param $attributes 
+ *   an array of key value pairs to be written in to the tag
+ * @return 
+ *   the string created to be placed between the tag
+ */
+function _webform_confirm_get_tag_attributes($attributes = null){
+  $output = '';
+  if (count($attributes)) {
+    foreach ($attributes as $key=>$atrribute) {
+      $output .= ' '. strtolower($key) . '="' . $atrribute . '"';
+    }
+  }
+  return $output;
+}
+
+/*
+ * Adds a span tag
+ * 
+ * @param $attributes 
+ *   an array of key value pairs to be written in to the tag
+ * @return 
+ *   the string created to be placed between the tag
+ */
+function _webform_confirm_get_span($val) {
+  return array(
+    'tag' => 'span',
+    'type' => 'complete',
+    'level' => $val['level'],
+    'attributes' => array('class' => 'confirm-text'), 
+    'value' => isset($val['value'])? nl2br($val['value']) : nl2br($val['attributes']['value']),
+  );
+}
+
+/*
+ * An implementation of hook_form_alter, this adds the extra validation
+ * method to the form for what we need to add to raise the confirmation
+ * page flags. It also renames the submit button
+ * 
+ * @param $form 
+ *   the usual
+ * @param $form_state 
+ *   the usual
+ * @param $form_id 
+ *   the drupal form id
+ * @return 
+ *   void
+ */
 function webform_confirm_form_alter(&$form, &$form_state, $form_id) {
   $is_webform = (isset($form['#node']->type) && $form['#node']->type == 'webform');
   if($is_webform) {
-    $form['#submit']=array_merge(array('webform_confirm_client_form_submit'), $form['#submit']);
-  }
-  if($is_webform && $_SERVER['REQUEST_METHOD']=='POST') {
-    foreach ($form['submitted'] as $key => &$item) {
-      if (isset($item['#type'])) {
-        
-        #$item['#value']=$form_state['post']['submitted'][$key];
-        #$item['#prefix']='<div class="kakunin">'.
-        #  '<input type="hidden" name="submitted['.$key.']" value="'.$item['#value'].'" />';
-        $item['#type']='hidden';
-        #$item['#suffix']='</div>';
-      }
-    }
-    if (!isset($_POST['submitted']['confirmation_done'])) {
-      $form['submitted']['confirmation_done'] = array('#type' => 'hidden', '#value' => 1);
-    }
-    else {
-      global $confirmed;
-      $confirmed = true;
-    }
-    
-    $form['actions']['back'] = array(
-      '#type'=>'button', '#button_type' => 'button', '#value' => t('Return'), '#weight' => 1000, 
-      '#attributes' => array('onclick' => 'window.location=\'history.back()\'; return false;')
-      );
+    $form['#validate']=array_merge($form['#validate'], array('webform_confirm_form_validate'));
   }
   if($is_webform && $_SERVER['REQUEST_METHOD']!='POST'){
     $form['actions']['submit']['#value'] = t('To confirmation page');
   }
 }
 
-function webform_confirm_client_form_submit($form, &$form_state) {
-  global $confirmed;
-  if (!(isset($confirmed) && $confirmed == true)) {
+/*
+ * An implementation of hook_orm_validate, raises a confirm global flag
+ * and sets form error message for confirmation page.
+ * 
+ * @param $form 
+ *   the usual
+ * @param $form_state 
+ *   the usual
+ * @return 
+ *   void
+ */
+function webform_confirm_form_validate(&$form, &$form_state) {
+  global $confirm;
+  if (!is_form_errors() && !isset($_POST['confirm']) && arg(2) != 'webform') {
     form_set_error('', t('Please check the below form'));
-    return;
+    $confirm = true;
   }
 }
