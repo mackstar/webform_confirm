@@ -51,6 +51,7 @@ function webform_confirm_preprocess_node(&$vars) {
         $val['tag'] = 'input';
         $val['attributes']['type'] = 'hidden';
         $val['attributes']['value'] = $val['value'];
+        unset($val['value']);
         $val['attributes'] = _webform_confirm_remove_unwanted_attributes($val['attributes']);
         $output[] = _webform_confirm_get_span($val);
       }
