@@ -19,8 +19,7 @@ function webform_confirm_preprocess_node(&$vars) {
     xml_parser_free($p);
     $output = array();
     $vals = _webform_confirm_remove_unchecked_radios($vals);
-    var_dump($vals);
-    exit;
+    $vals = _webform_confirm_process_selected($vals);
     foreach ($vals as $val) {
       if ($val['tag'] == 'form' && $val['type'] == 'close') {
         
@@ -73,40 +72,58 @@ function webform_confirm_preprocess_node(&$vars) {
 function _webform_confirm_process_selected($vals) {
   $options = false;
   foreach ($vals as $key => $tag) {
-    if ($tag['tag'] == 'select' && $type == 'open') {
+    if ($tag['tag'] == 'select' && $tag['type'] == 'open') {
       if (isset($tag['attributes']['multiple'])) {
         $options = 'multiple';
       }
       else{
         $options = 'single';
       }
+      // Are the key/value key for options
       $keys = array();
+      // Saves the value for preview
       $values = array();
+      // Keep the level consistant
+      $level =  $tag['level'];
+      // Tag Keys save the hidden tag name/key
       $tag_key = $tag['attributes']['name'];
+      // Save hidden tags to insert before form end
+      $insert_tags = array();
     }
-    if ($options) {
-      $keys[] = $tag['attributes']['value'];
-      $values[] = $tag['value'];
-      unset($vals[$key]);
-    }
-    if ($tag['tag'] == 'select' && $type == 'close') {
-      $options = false;
+    // If this is the closing select tag, the span to preview input
+    // and add text input fields
+    if ($tag['tag'] == 'select' && $tag['type'] == 'close') {
       if ($options == 'multiple') {
         $vals[$key] = _webform_confirm_get_span(array(
-          'level' => $tag['level'], 
+          'level' => $level, 
           'value' => implode(', ', $values),
         ));
         foreach($keys as $key) {
-          $vals[] = _webform_confirm_get_hidden_tag($tag_key.'[]', $key);
+          $insert_tags[] = _webform_confirm_get_hidden_tag($tag_key, $key);
         }
       }
       else {
-        $vals[$key] = _webform_confirm_get_span(array('level' => $tag['level'], 'value' => $values[0]));
-        $vals[] = _webform_confirm_get_hidden_tag($tag_key, $keys[0]);
+        $vals[$key] = _webform_confirm_get_span(array('level' => $level, 'value' => $values[0]));
+        $insert_tags[] = _webform_confirm_get_hidden_tag($tag_key, $keys[0]);
       }
+      $options = false;
+    }
+    if ($options) {
+      if (isset($tag['attributes']['selected'])) {
+        $keys[] = $tag['attributes']['value'];
+        $values[] = $tag['value'];
+        $array_keys[] = $key;
+      }
+      unset($vals[$key]);
+    }
+    if (($tag['tag'] == 'form' && $tag['type'] == 'close') || isset($endform)) {
+      $insert_tags[] = $tag;
+      unset($vals[$key]);
+      $endform = true;
     }
   }
-  return $vals;
+  
+  return array_merge($vals, $insert_tags);
 }
 
 /*
@@ -247,12 +264,12 @@ function _webform_confirm_get_span($val) {
  * @return 
  *   the tag array of which to create a hidden tag on write
  */
-function _webform_confirm_get_hidden_tag($key, $value) {
+function _webform_confirm_get_hidden_tag($key, $value, $level = 1) {
   return array(
     'tag' => 'input',
     'type' => 'complete',
-    'level' => 1,
-    'attributes' => array('value' => $value, 'name' => $key), 
+    'level' => $level,
+    'attributes' => array('value' => $value, 'name' => $key, 'type' => 'hidden'), 
   );
 }
 
