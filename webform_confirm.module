@@ -311,8 +311,22 @@ function webform_confirm_form_alter(&$form, &$form_state, $form_id) {
  */
 function webform_confirm_form_validate(&$form, &$form_state) {
   global $confirm;
-  if (!is_form_errors() && !isset($_POST['confirm']) && arg(2) != 'webform'  && arg(2) != 'submission') {
+  if (!webform_confirm_is_form_errors() && !isset($_POST['confirm']) && arg(2) != 'webform'  && arg(2) != 'submission') {
     form_set_error('', t('Please check the below form'));
     $confirm = true;
+  }
+}
+
+/**
+ * Checks if the form has errors
+ *
+ * @return true or false
+ */
+function webform_confirm_is_form_errors() {
+  if (count(form_get_errors())>0 || count(drupal_get_messages('error', FALSE))) {
+    return TRUE;
+  }
+  else {
+    return FALSE;
   }
 }
