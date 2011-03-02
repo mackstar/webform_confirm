@@ -8,7 +8,7 @@ The project is currently available as a sandbox project on [drupal.org](http://d
 Issues
 ------
 
-The project is working with a standard install of webform. Changing the theme elements for forms is not currently supported. 
+The project is working with a standard install of Webform. Changing the theme elements for forms is not currently supported. 
 
 Future improvements and features
 ------------------------------
