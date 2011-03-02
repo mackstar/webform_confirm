@@ -10,8 +10,8 @@
  *   void
  */
 function webform_confirm_preprocess_node(&$vars) {
-  global $confirm;
-  if($_SERVER['REQUEST_METHOD'] == 'POST' &&  $confirm) {
+  global $webform_confirm_flag;
+  if($_SERVER['REQUEST_METHOD'] == 'POST' &&  $webform_confirm_flag) {
     $p = xml_parser_create($p);
     xml_parser_set_option($p, XML_OPTION_CASE_FOLDING, 0);    
     xml_parser_set_option($p, XML_OPTION_SKIP_WHITE, 1);
@@ -123,7 +123,6 @@ function _webform_confirm_process_selected($vals) {
       $endform = true;
     }
   }
-  
   return array_merge($vals, $insert_tags);
 }
 
@@ -310,10 +309,10 @@ function webform_confirm_form_alter(&$form, &$form_state, $form_id) {
  *   void
  */
 function webform_confirm_form_validate(&$form, &$form_state) {
-  global $confirm;
+  global $webform_confirm_flag;
   if (!webform_confirm_is_form_errors() && !isset($_POST['confirm']) && arg(2) != 'webform'  && arg(2) != 'submission') {
     form_set_error('', t('Please check the below form'));
-    $confirm = true;
+    $webform_confirm_flag = true;
   }
 }
 
@@ -323,10 +322,10 @@ function webform_confirm_form_validate(&$form, &$form_state) {
  * @return true or false
  */
 function webform_confirm_is_form_errors() {
-  if (count(form_get_errors())>0 || count(drupal_get_messages('error', FALSE))) {
-    return TRUE;
+  if (count(form_get_errors()) > 0 || count(drupal_get_messages('error', FALSE))) {
+    return true;
   }
   else {
-    return FALSE;
+    return false;
   }
 }
