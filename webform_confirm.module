@@ -1,5 +1,5 @@
 <?php
-/*
+/**
  * An implementation of preprocess_node to rewite the web form
  * in order to have a confirmation page. This is done by using 
  * php's xml_parser functions
@@ -61,7 +61,7 @@ function webform_confirm_preprocess_node(&$vars) {
   }
 }
 
-/*
+/**
  * Processes select tags and multiple select tags, replacing them with the correct
  * span and hidden tags for preview.
  * 
@@ -127,7 +127,7 @@ function _webform_confirm_process_selected($vals) {
   return array_merge($vals, $insert_tags);
 }
 
-/*
+/**
  * Removes un-needed tags which occur from unchecked radio boxes
  * 
  * @param $vals 
@@ -166,7 +166,7 @@ function _webform_confirm_remove_unchecked_radios($vals) {
   return $vals;
 }
 
-/*
+/**
  * Removes un-needed attributes from the hidden tag
  * 
  * @param $attributes 
@@ -184,7 +184,7 @@ function _webform_confirm_remove_unwanted_attributes($attributes) {
   return $attributes;
 }
 
-/*
+/**
  * Creates xml from an array struct created by xml_parse_into_struct
  * function
  * 
@@ -219,7 +219,7 @@ function _webform_confirm_create_xml($vals) {
   return $output;
 }
 
-/*
+/**
  * A helper function to get the string of attributes for a tag
  * 
  * @param $attributes 
@@ -237,7 +237,7 @@ function _webform_confirm_get_tag_attributes($attributes = null){
   return $output;
 }
 
-/*
+/**
  * Adds a span tag
  * 
  * @param $val 
@@ -255,7 +255,7 @@ function _webform_confirm_get_span($val) {
   );
 }
 
-/*
+/**
  * Adds a hidden tag
  * 
  * @param $key 
@@ -274,7 +274,7 @@ function _webform_confirm_get_hidden_tag($key, $value, $level = 1) {
   );
 }
 
-/*
+/**
  * An implementation of hook_form_alter, this adds the extra validation
  * method to the form for what we need to add to raise the confirmation
  * page flags. It also renames the submit button
@@ -298,7 +298,7 @@ function webform_confirm_form_alter(&$form, &$form_state, $form_id) {
   }
 }
 
-/*
+/**
  * An implementation of hook_form_validate, raises a confirm global flag
  * and sets form error message for confirmation page.
  * 
